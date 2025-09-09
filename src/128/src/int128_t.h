@@ -52,6 +52,14 @@ INT128_T_IMPLEMENTATION int128_error_t int128_free(int128_t * *const ptr);
  */
 INT128_T_IMPLEMENTATION int128_t int128_add(int128_t a, int128_t b);
 
+/**
+ * @brief Subtracts two `int128_t`s
+ * @param a The first `int128_t`
+ * @param b The second `int128_t1
+ * @return The difference of the two in another `int128_t`
+ */
+INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b);
+
 #ifdef INT128_T_IMPLEMENTATION
 
 INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst) {
@@ -75,10 +83,19 @@ INT128_T_IMPLEMENTATION int128_error_t int128_free(int128_t * *const ptr) {
 // --- //
 
 INT128_T_IMPLEMENTATION int128_t int128_add(int128_t a, int128_t b) {
-    int128_t c; // The sum of the two `int128_t`s
+    int128_t c;
 
     c.lo = a.lo + b.lo; // Add the low bits
-    c.hi = a.hi + b.hi + (uint64_t)(c.lo < a.lo); // Add the high bits and the carry
+    c.hi = a.hi + b.hi + (uint64_t)(c.lo < a.lo); // Add the high bits and the carry by checking if the sum wrapped back to zero
+
+    return c;
+}
+
+INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b) {
+    int128_t c;
+
+    c.lo = a.lo - b.lo; // Subtract the low bits
+    c.hi = a.hi - b.hi - (uint64_t)(c.lo > a.lo); // Subtract the high bits and the carry by checking if the sum wrapped back to the maximum value of a uint64_t
 
     return c;
 }
