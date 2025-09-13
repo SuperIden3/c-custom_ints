@@ -9,10 +9,12 @@
 #define INT128_T_IMPLEMENTATION extern
 #endif // INT128_T_IMPLEMENTATION
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,16 +35,19 @@ typedef enum {
 
 #define INT128_SIZE ((size_t)128) // Expected size of an `int128_t`
 #define INT128_ACTUAL_SIZE (sizeof(int128_t)) // Actual size of an `int128_t` from `sizeof`.
+#define INT128_TOSTRFUNC_REPRSIZE (sizeof(uint64_t) * 2 + 1) // The sizes of the two members plus a null terminator
 
 // --- // Initialization
 
 /**
  * @brief Allocates a new `int128_t` in memory
  * @param dst The address of a pointer to reassign to the allocation: `&(int128_t *)`
+ * @param hi The high bits that will be assigned to the `int128_t` if it's allocated
+ * @param lo The low bits that will be assigned to the `int128_t` if it's allocated
  * @return `INT128_T_SUCCESS` on successful allocation, `INT128_T_INVALID_ARG` if `NULL` is passed in, `INT128_T_NO_MEMORY` if `malloc` fails
  * @note Calls free on the pointer if it is not `NULL` before allocating new memory
  */
-INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst);
+INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst, uint64_t hi, uint64_t lo);
 
 /**
  * @brief Frees an `int128_t` from memory
@@ -59,7 +64,7 @@ INT128_T_IMPLEMENTATION int128_error_t int128_free(int128_t * *const ptr);
  * @param b The second `int128_t`
  * @return `true` if they are equal, `false` otherwise
  */
-INT128_T_IMPLEMENTATION bool int128_equals(int128_t a, int128_t b) { return (a.hi == b.hi) && (a.lo == b.lo); }
+INT128_T_IMPLEMENTATION bool int128_equals(int128_t a, int128_t b);
 
 /**
  * @brief Checks if two `int128_t`s are not equal
@@ -67,7 +72,7 @@ INT128_T_IMPLEMENTATION bool int128_equals(int128_t a, int128_t b) { return (a.h
  * @param b The second `int128_t`
  * @return `true` if they are not equal, `false` otherwise
  */
-INT128_T_IMPLEMENTATION bool int128_not_equals(int128_t a, int128_t b) { return (a.hi != b.hi) || (a.lo != b.lo); }
+INT128_T_IMPLEMENTATION bool int128_not_equals(int128_t a, int128_t b);
 
 /**
  * @brief Checks if `a` is less than `b`
@@ -109,18 +114,22 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b);
  * @brief Turns an `int128_t` into a heap-allocated string representation.
  * @param a The `int128_t` to turn into a string
  * @param ret The address of a `char *` so it can point to a memory allocated `char *`
- * @note The implementation right now is just the higher bits and the lower bits represented as two `uint64_t`s with a NULL character separating them and at the end.
+ * @note The implementation right now is just the higher bits and the lower bits represented as two `uint64_t`s with a NULL character at the end.
  */
 INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret);
 
 #ifdef INT128_T_IMPLEMENTATION
 
-INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst) {
+INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst, uint64_t hi, uint64_t lo) {
 	if (dst == NULL) return INT128_T_INVALID_ARG; // No pointer address given
 
-	if (*dst != NULL) free(*dst); // Free the struct assuming it's on the   heap
+	if (*dst != NULL) free(*dst); // Free the struct assuming it's on the heap
 	*dst = malloc(sizeof(int128_t)); // Allocate it
 	if (*dst == NULL) return INT128_T_NO_MEMORY; // Allocation failed
+
+	// Assign
+	(*dst)->hi = hi;
+	(*dst)->lo = lo;
 
 	return INT128_T_SUCCESS;
 }
@@ -169,7 +178,13 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b) {
 INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret) {
 	if (ret == NULL) return INT128_T_INVALID_ARG; // No pointer given
 
-	
+	*ret = (char*)malloc(INT128_TOSTRFUNC_REPRSIZE); // Allocate string for representation
+	if (*ret == NULL) return INT128_T_NO_MEMORY; // malloc fails
+
+	sprintf(*ret, "%" PRIu64 "%" PRIu64, a.hi, a.lo); // Format and add null terminator
+	(*ret)[INT128_TOSTRFUNC_REPRSIZE - 1] = '\0';
+
+	return INT128_T_SUCCESS;
 }
 
 #endif // INT128_T_IMPLEMENTATION
