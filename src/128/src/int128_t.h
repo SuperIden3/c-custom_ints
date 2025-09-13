@@ -29,8 +29,15 @@ typedef enum {
 	INT128_T_NO_MEMORY
 } int128_error_t;
 
+// --- // Macros
+
+#define INT128_SIZE ((size_t)128) // Expected size of an `int128_t`
+#define INT128_ACTUAL_SIZE (sizeof(int128_t)) // Actual size of an `int128_t` from `sizeof`.
+
+// --- // Initialization
+
 /**
- * @brief Allocates a new `int128_t` in memory.
+ * @brief Allocates a new `int128_t` in memory
  * @param dst The address of a pointer to reassign to the allocation: `&(int128_t *)`
  * @return `INT128_T_SUCCESS` on successful allocation, `INT128_T_INVALID_ARG` if `NULL` is passed in, `INT128_T_NO_MEMORY` if `malloc` fails
  * @note Calls free on the pointer if it is not `NULL` before allocating new memory
@@ -38,16 +45,16 @@ typedef enum {
 INT128_T_IMPLEMENTATION int128_error_t int128_new(int128_t * *const dst);
 
 /**
- * @brief Frees an `int128_t` from memory.
+ * @brief Frees an `int128_t` from memory
  * @param ptr The address of a pointer to free: `&(int128_t *)`
  * @return `INT128_T_SUCCESS` on successful free, `INT128_T_INVALID_ARG` if `NULL` is passed in
  */
 INT128_T_IMPLEMENTATION int128_error_t int128_free(int128_t * *const ptr);
 
-// --- //
+// --- // Equalities
 
 /**
- * @brief Checks if two `int128_t`s are equal.
+ * @brief Checks if two `int128_t`s are equal
  * @param a The first `int128_t`
  * @param b The second `int128_t`
  * @return `true` if they are equal, `false` otherwise
@@ -55,7 +62,7 @@ INT128_T_IMPLEMENTATION int128_error_t int128_free(int128_t * *const ptr);
 INT128_T_IMPLEMENTATION bool int128_equals(int128_t a, int128_t b) { return (a.hi == b.hi) && (a.lo == b.lo); }
 
 /**
- * @brief Checks if two `int128_t`s are not equal.
+ * @brief Checks if two `int128_t`s are not equal
  * @param a The first `int128_t`
  * @param b The second `int128_t`
  * @return `true` if they are not equal, `false` otherwise
@@ -63,7 +70,7 @@ INT128_T_IMPLEMENTATION bool int128_equals(int128_t a, int128_t b) { return (a.h
 INT128_T_IMPLEMENTATION bool int128_not_equals(int128_t a, int128_t b) { return (a.hi != b.hi) || (a.lo != b.lo); }
 
 /**
- * @brief Checks if `a` is less than `b`.
+ * @brief Checks if `a` is less than `b`
  * @param a The first `int128_t`
  * @param b The second `int128_t`
  * @return `true` if `a` is less than `b`, `false` otherwise
@@ -71,17 +78,17 @@ INT128_T_IMPLEMENTATION bool int128_not_equals(int128_t a, int128_t b) { return 
 INT128_T_IMPLEMENTATION bool int128_less_than(int128_t a, int128_t b);
 
 /**
- * @brief Checks if `a` is greater than `b`.
+ * @brief Checks if `a` is greater than `b`
  * @param a The first `int128_t`
  * @param b The second `int128_t`
  * @return `true` if `a` is greater than `b`, `false` otherwise
  */
 INT128_T_IMPLEMENTATION bool int128_greater_than(int128_t a, int128_t b);
 
-// --- //
+// --- // Arithmetic
 
 /**
- * @brief Adds two `int128_t`s.
+ * @brief Adds two `int128_t`s
  * @param a The first `int128_t`
  * @param b The second `int128_t`
  * @return The sum of the two `int128_t`s
@@ -95,6 +102,16 @@ INT128_T_IMPLEMENTATION int128_t int128_add(int128_t a, int128_t b);
  * @return The difference of the two in another `int128_t`
  */
 INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b);
+
+// --- // Other
+
+/**
+ * @brief Turns an `int128_t` into a heap-allocated string representation.
+ * @param a The `int128_t` to turn into a string
+ * @param ret The address of a `char *` so it can point to a memory allocated `char *`
+ * @note The implementation right now is just the higher bits and the lower bits represented as two `uint64_t`s with a NULL character separating them and at the end.
+ */
+INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret);
 
 #ifdef INT128_T_IMPLEMENTATION
 
@@ -145,6 +162,14 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b) {
 	c.hi = a.hi - b.hi - (uint64_t)(c.lo > a.lo); // Subtract the high bits and the carry by checking if the sum wrapped back to the maximum value of a uint64_t
 
 	return c;
+}
+
+// --- //
+
+INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret) {
+	if (ret == NULL) return INT128_T_INVALID_ARG; // No pointer given
+
+	
 }
 
 #endif // INT128_T_IMPLEMENTATION
