@@ -34,8 +34,9 @@ typedef enum {
 // --- // Macros
 
 #define INT128_SIZE ((size_t)128) // Expected size of an `int128_t`
-#define INT128_ACTUAL_SIZE (sizeof(int128_t)) // Actual size of an `int128_t` from `sizeof`.
-#define INT128_TOSTRFUNC_REPRSIZE (sizeof(uint64_t) * 2 + 1) // The sizes of the two members plus a null terminator
+#define INT128_ACTUAL_SIZE (sizeof(int128_t)) // Actual size of an `int128_t` from `sizeof`
+#define INT128_UINT64_MSB ((uint64_t)(1 << 63)) // The most significant bit in a `uint64_t`
+#define INT128_ZERO ((int128_t){ .hi = 0, .lo = 0 }) // The zero value for `int128_t`
 
 // --- // Initialization
 
@@ -111,6 +112,40 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b);
 // --- // Other
 
 /**
+ * @brief Shifts an `int128_t` to the left a specified number of bits, also counting overflow
+ * @param a The `int128_t`
+ * @param bit_count The specified number of bits to shift left
+ * @returns The shifted-left `int128_t`
+ */
+INT128_T_IMPLEMENTATION int128_t int128_shift_left(int128_t a, size_t bit_count);
+
+/**
+ * @brief Shifts an `int128_t` to the right a specified number of bits, also counting overflow
+ * @param a The `int128_t`
+ * @param bit_count The specified number of bits to shift right
+ * @returns The shifted-right `int128_t`
+ */
+INT128_T_IMPLEMENTATION int128_t int128_shift_right(int128_t a, size_t bit_count);
+
+/**
+ * @brief Shifts an `int128_t` to the left a specified number of bits, wrapping around the bits that overflow on the left to the right side
+ * @example Shifting bits { hi = most significant bit of a 64-bit integer, lo = 0 } left by 1 bit results in { hi = 0, lo = 1 }
+ * @param a The `int128_t`
+ * @param bit_count The specified number of bits to shift left
+ * @returns The shifted-left `int128_t`
+ */
+INT128_T_IMPLEMENTATION int128_t int128_shift_left_wrap(int128_t a, size_t bit_count);
+
+/**
+ * @brief Shifts an `int128_t` to the right a specified number of bits, wrapping around the bits that overflow on the left to the right side
+ * @example Shifting bits { hi = 0, lo = most significant bit of a 64-bit integer } right by 1 bit results in { hi = most significant bit of a 64-bit integer, lo = 0 }
+ * @param a The `int128_t`
+ * @param bit_count The specified number of bits to shift right
+ * @returns The shifted-right `int128_t`
+ */
+INT128_T_IMPLEMENTATION int128_t int128_shift_right_wrap(int128_t a, size_t bit_count);
+
+/**
  * @brief Turns an `int128_t` into a heap-allocated string representation.
  * @param a The `int128_t` to turn into a string
  * @param ret The address of a `char *` so it can point to a memory allocated `char *`
@@ -175,14 +210,30 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b) {
 
 // --- //
 
+INT128_T_IMPLEMENTATION int128_t int128_shift_left(int128_t a, size_t bit_count) { 
+	if (bit_count >= 128) return (int128_t){ .hi = 0, .lo = 0 }; // Shifted out of existence
+
+	if (bit_count >= 64) return (int128_t){ .hi = (a.lo << (bit_count - 64)), .lo = 0 }; // All low bits shifted into high bits
+
+	return (int128_t){ .hi = (a.hi << bit_count) | (a.lo >> (64 - bit_count)), .lo = (a.lo << bit_count) }; // hi: shift high bits left, add overflow from low bits; lo: shift low bits left
+}
+
+INT128_T_IMPLEMENTATION int128_t int128_shift_right(int128_t a, size_t bit_count) {
+	if (bit_count >= 128) return (int128_t){ .hi = 0, .lo = 0 }; // Shifted out of existence
+
+	if (bit_count >= 64) return (int128_t){ .hi = 0, .lo = (a.hi >> (bit_count - 64)) }; // All high bits shifted into low bits
+
+	return (int128_t){ .hi = (a.hi >> bit_count), .lo = (a.lo >> bit_count) | (a.hi << (64 - bit_count)) }; // hi: shift high bits right; lo: shift low bits right, add overflow from high bits
+}
+
+INT128_T_IMPLEMENTATION int128_t int128_shift_left_wrap(int128_t a, size_t bit_count) { return (int128_t){ .hi = (a.hi << bit_count) | (a.lo >> (64 - bit_count)), .lo = (a.lo << bit_count) | (a.hi >> (64 - bit_count)) }; }
+
+INT128_T_IMPLEMENTATION int128_t int128_shift_right_wrap(int128_t a, size_t bit_count) { return (int128_t){ .hi = (a.hi >> bit_count) | (a.lo << (64 - bit_count)), .lo = (a.lo >> bit_count) | (a.hi << (64 - bit_count)) }; }
+
 INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret) {
 	if (ret == NULL) return INT128_T_INVALID_ARG; // No pointer given
 
-	*ret = (char*)malloc(INT128_TOSTRFUNC_REPRSIZE); // Allocate string for representation
-	if (*ret == NULL) return INT128_T_NO_MEMORY; // malloc fails
-
-	sprintf(*ret, "%" PRIu64 "%" PRIu64, a.hi, a.lo); // Format and add null terminator
-	(*ret)[INT128_TOSTRFUNC_REPRSIZE - 1] = '\0';
+	
 
 	return INT128_T_SUCCESS;
 }
