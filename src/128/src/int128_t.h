@@ -109,6 +109,13 @@ INT128_T_IMPLEMENTATION int128_t int128_add(int128_t a, int128_t b);
  */
 INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b);
 
+/**
+ * @brief Divides an `int128_t` by 10 and returns the remainder.
+ * @ param a A pointer to a `int128_t` so that the struct changes as it's divided by 10`
+ * @return A `uint8_t` containing the remainder
+ */
+INT128_T_IMPLEMENTATION uint8_t int128_divide_mod10(int128_t *a);
+
 // --- // Other
 
 /**
@@ -208,6 +215,42 @@ INT128_T_IMPLEMENTATION int128_t int128_subtract(int128_t a, int128_t b) {
 	return c;
 }
 
+INT128_T_IMPLEMENTATION uint8_t int128_divide_mod10(int128_t *a) {
+	if (a == NULL) return 0; // No int128_t to operate on
+
+	uint64_t new_hi, new_lo; 
+
+	// Divide high limb
+	uint64_t rem = a->hi % 10; // 128-bit numerator = (remainder << 64) + hi
+	new_hi = a->hi / 10;
+
+	// Divide low limb using leftover remainder
+	// numerator = rem * 2^64 + lo
+	// split lo into two 32-bit halves to avoid overflow
+	uint64_t lo = a->lo;
+
+	// Decompose lo for safe multiplication
+	uint64_t hi32 = lo >> 32;
+	uint64_t lo32 = lo & 0xffffffffull;
+
+	// Compute numerator = (rem << 64) + lo
+	uint64_t part1 = (rem << 32) + hi32;
+	uint64_t q1 = part1 / 10;
+	uint64_t r1 = part1 % 10;
+
+	uint64_t part2 = (r1 << 32) + lo32;
+	uint64_t q2 = part2 / 10;
+	uint64_t r2 = part2 % 10;
+
+	new_lo = (q1 << 32) | q2;
+	rem = r2;
+
+	a->hi = new_hi;
+	a->lo = new_lo;
+
+	return rem;
+}
+
 // --- //
 
 INT128_T_IMPLEMENTATION int128_t int128_shift_left(int128_t a, size_t bit_count) { 
@@ -232,6 +275,10 @@ INT128_T_IMPLEMENTATION int128_t int128_shift_right_wrap(int128_t a, size_t bit_
 
 INT128_T_IMPLEMENTATION int128_error_t int128_tostr(int128_t a, char * *const ret) {
 	if (ret == NULL) return INT128_T_INVALID_ARG; // No pointer given
+
+	if (*ret != NULL) return INT128_T_INVALID_ARG; // Can't trust; only fixed length of 256
+	*ret = calloc(256, sizeof(char));
+	if (*ret = NULL) return INT128_T_NO_MEMORY; // calloc fails
 
 	
 
