@@ -38,6 +38,8 @@ typedef enum {
 #define INT128_UINT64_MSB ((uint64_t)(1 << 63)) // The most significant bit in a `uint64_t`
 #define INT128_ZERO ((int128_t){ .hi = 0, .lo = 0 }) // The zero value for `int128_t`
 
+#define INT128_FROM(hi, lo) ((int128_t){ .hi = (uint64_t)(hi), .lo = (uint64_t)(lo) }) // `int128_t` from `hi` and `lo` values
+
 // --- // Initialization
 
 /**
